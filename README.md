@@ -11,8 +11,6 @@ Create a Organization -> Memeber -> Production Apps
 - Callback URL https://localhost:8000/oauth2/callback (has to match the callback URL in python code)
 - Copy Client ID and Client Secrete
 
-![2025-12-23_12-42](assets/2025-12-23_12-42-20251223124259-r3nmyzo.png)
-
 #### Prepare Python environmnet
 
 - Install `uv`​: [docs.astral.sh/uv/getting-started/installation/](https://docs.astral.sh/uv/getting-started/installation/)
