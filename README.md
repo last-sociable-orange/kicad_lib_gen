@@ -1,0 +1,103 @@
+# Kicad CIP workflow
+
+The goal of this work flow is to streamline Kicad database library, symbol and footprint pulled from either Digikey or manufacturer's website, and using Digikey CIP app to fill up component information stored in the database. The CIP app is designed specificlly for pulling component information from Digikey using its web API. It is possbile to pull information from other website but for now we only support Digikey.
+
+#### Create Digikey Developer Account
+
+Register at https://developer.digikey.com/
+
+Create a Organization -> Memeber -> Production Apps
+
+- Callback URL https://localhost:8000/oauth2/callback (has to match the callback URL in python code)
+- Copy Client ID and Client Secrete
+
+![2025-12-23_12-42](assets/2025-12-23_12-42-20251223124259-r3nmyzo.png)
+
+#### Prepare Python environmnet
+
+- Install `uv`​: [docs.astral.sh/uv/getting-started/installation/](https://docs.astral.sh/uv/getting-started/installation/)
+- Copy python files into folder
+- Run `uv run digikey_auth.py` to get token file from Digikey Dev portal
+- Run `uv run kicad_cip.py` to retrieve component information from Digikey and store it into Sqlite database
+
+#### Create Kicad Project
+
+- Create Kicad project
+- Create `Library`​, `Library/Symbol`​, `Library/Footprint/Footprint.pretty`​, `Library/Step` folders under project folder
+
+```bash
+mkdir -p Library
+mkdir -p Library/Symbol Library/Footprint/Footprint.pretty Library/Step
+```
+
+- Copy `components_db.kicad_dbl`​ under project folder. This is the `ODBC` setup file for the system to interact with the Sqlite database.
+- Copy `components.db`​under `Library`if you have an existing database
+- Copy python CIP scripts under `Library`​. You can also use it in any other folder and use `-o` option to specify the database file name in the commandline.
+- Copy `Standard.kicad_sym`​ to `Library/Symbol`. This is a library that contains standard symbols and Power/GND symbols that can be used across projects. It is recommended to use these standard symbols to keep schematics design consistant across projects but user can also use their own symbols at their own discretion.
+- Copy folder `Standard.pretty`​ to `Library/Footprint`​. This folder contains generic footprints like `R_0402`​, `SOT23` that can be used for components that have standard footprints, etc.
+- A starter `Standard.kicad_sym`​ and `Library/Sdandard.pretty` will be provided for new project.
+
+#### Prepare symbol, footprint and step files
+
+Symbols and Footprints are organized following below rules:
+
+Symbol high-level rules:
+
+- ​`Standard.kicad_sym`​ contains generic symbols that are vendor agnostic. Field `KicadSymbolLibrary`​ in Sqlite database maps to the symbol names in `Standard.kicad_sym`​. To link them together, one must enter `Standard:<symbol_name>`​correctly when creating a component instance in the component information database. For example: A resistor's symbol name in database would be: `Standard:R`​ when entering the resistor's `KicadSymbolLibrary` field.
+- No standard symbols are stored seperately per component in `Library/Symbol` folder. This makes it easier to manage symbols from project perspective. One can change a symbol and manage revision using git or other revision control tools without affecting other symbols. Naming convetions are covered below.
+
+Footprint high-level rules:
+
+- Footprints are stored seperately per component (or per footprint for generic footprints) in `Standard.pretty`​ or `Footprint.pretty` folders respectively
+
+Symbol and Footprint Workflow:
+
+- Use standard symbols/footprint if they are available in `Standard.kicad_sym`​ and `Standard.pretty`
+- Download symbol and footprint (and step file) from Digikey/Mouser/Ultralibrarian/SanpEDA
+- **Important!** ​ **Check symbol and footprint integrity and correctness against datasheet.**
+- Create symbol and footprint if they are not available
+- Copy symbol, footprint and step files to `Library/Symbol`​, `Library/Footprint/Footprint.pretty`​ and `Library/Step` folders respectively
+- Rename symbol/footprint/step files following below rules:
+
+  - [component_type]_[component_product_number]
+  - component_type is one of the followings, or best fit:
+
+    - IC, for integrated circuit chips
+    - DIO, for diodes, including schottky, tvs
+    - IND, for inductors, coils, chocks, ferrite beads
+    - TRANS, for transistors, including BJTs, FETs
+    - CON, for connectors
+    - SW, for switches
+    - ...
+  - component_product_number is the full part number including package suffix
+  - All chars are capital letters
+- **Symbol extra steps**:
+
+  - Open symbol with Kicad Symbol Editor, edit/delete unneccessary fields to avoid them polluting the database information. Only leave Kicad default fields.
+  - Save symbol in the same name as the file name. The purpose of this step is to match the database information entered in CIS app
+- **Footprint extra steps**:
+
+  - Make sure Reference field is **REF****
+  - Make sure Value field visibility is **Unchecked**
+  - Add Text in F.Fab layer with value ${REFERENCE}. This is used as Reference Designator in Assembly Drawing
+- **Step file extra steps**:
+
+  - Renanme *.stp file to *.step
+  - Recommend using environment variables to define the step file path when doing the step file mapping in Footprint Editor
+
+    - Define a Environment Variable: PROJECT_STEP_DIR = "your_step_dir, usually ./Library/Step"
+    - Step file path = ${PROJECT_STEP_DIR}/your_step_file.step
+
+#### Add component information into database
+
+There are two ways to add components into database:
+
+- Add one component: `uv run kicad_cip.py -k "keywords"`
+- Batch add components: `uv run kicad_py -f parts.csv`
+
+  - CSV file has 3 fields deliminated by ',': keywords, symbol_name, footprint_name
+  - one component per line
+  - app will search using provided keywords from digikey. User has to select one component from the search list
+  - parts will be added automatically if symbol_name and footprint_name is not empty. Otherwise user input will be asked
+
+‍
