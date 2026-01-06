@@ -240,19 +240,23 @@ class ProductDb:
         return
 
     # return a list of symbol names in current database for auto-completion
-    def query_symbols(self) -> None | list[str]:
+    def query_symbols(self) -> None | list[tuple[int, str]]:
         self.cur.execute(f'''
-                            SELECT DISTINCT KicadSymbolLibrary
+                            SELECT MAX(_ROWID_) As LastID, KicadSymbolLibrary
                             FROM components
+                            GROUP BY KicadSymbolLibrary
+                            ORDER BY LastID DESC
                          ''')
         res = self.cur.fetchall()
         return res
 
     # return a list of footprint names in current database for auto-completion
-    def query_footprints(self) -> None | list[str]:
+    def query_footprints(self) -> None | list[tuple[int,str]]:
         self.cur.execute(f'''
-                            SELECT DISTINCT KicadFootprintLibrary
+                            SELECT MAX(_ROWID_) As LastID, KicadFootprintLibrary
                             FROM components
+                            GROUP BY KicadFootprintLibrary
+                            ORDER BY LastID DESC
                          ''')
         res = self.cur.fetchall()
         return res
@@ -393,6 +397,7 @@ def input_product_info_prompt(product: ProductInfo,
             "Enter Kicad symbol library name: ",
             default=product.base.kicad_symbol_library,
             completer=symbol_completer,
+            complete_while_typing=True,
         )
         # allow using ? as placeholder for manufacturer product number
         product.base.kicad_symbol_library = re.sub(
@@ -402,6 +407,7 @@ def input_product_info_prompt(product: ProductInfo,
             "Enter Kicad footprint library name: ",
             default=product.base.kicad_footprint_library,
             completer=footprint_completer,
+            complete_while_typing=True,
         )
         product.base.kicad_footprint_library = re.sub(
             r"\?", f"{product.base.manufacturer_product_number}", prompt_input
@@ -423,7 +429,7 @@ if __name__ == "__main__":
         '--file',
         '-f',
         type=str,
-        help='file contains "product_number,symbol,footprint". Each product per line.',
+        help='file contains part number, each product per line.',
     )
     # output args
     parser.add_argument(
@@ -448,11 +454,11 @@ if __name__ == "__main__":
         with open(args.file, "r") as file:
             rows = csv.reader(file)
             for row in rows:
-                if len(row) != 3:
-                    logging.error('CSV format error: "product_number,symbol,footprint" not met')
+                if len(row) != 1:
+                    logging.error('Format error: one part number per line. Double quote part number if it contains ","')
                     raise
                 else:
-                    keywords_list.append({'product':row[0],'symbol':row[1],'footprint':row[2]})
+                    keywords_list.append({'product':row[0],'symbol':'','footprint':''})
 
     # search and add parts
     for keyword in keywords_list:
@@ -476,7 +482,7 @@ if __name__ == "__main__":
                 if symbol_list is not None:
                     symbols = ['Standard:']
                     for item in symbol_list:
-                        symbols.append(item[0])
+                        symbols.append(item[1])
                     symbol_completer = WordCompleter(symbols, ignore_case=True)
                 else:
                     symbol_completer = None
@@ -484,7 +490,7 @@ if __name__ == "__main__":
                 if footprint_list is not None:
                     footprints = ['Standard:', 'Footprint:?']
                     for item in footprint_list:
-                        footprints.append(item[0])
+                        footprints.append(item[1])
                     footprint_completer = WordCompleter(footprints, ignore_case=True)
                 else:
                     footprint_completer = None
