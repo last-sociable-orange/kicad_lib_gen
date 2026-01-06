@@ -301,7 +301,10 @@ def parse_digikey_response(response: any) -> ProductInfo:
                 param['ParameterId'] == 1 or\
                 param['ParameterId'] == 2087 or\
                 param['ParameterId'] == 2049:
-            product.base.value = value
+            if value.find('Ohms'):
+                product.base.value = value.removesuffix('Ohms').upper()
+            else:
+                product.base.value = value
 
     # populate categories
     product.base.main_category = response['Category']['Name']
