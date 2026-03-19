@@ -90,12 +90,42 @@ Symbol and Footprint Workflow:
 
 There are two ways to add components into database:
 
-- Add one component: `uv run kicad_cip.py -k "keywords"`
-- Batch add components: `uv run kicad_py -f parts.csv`
+**Interactive mode (single component):**
+```bash
+uv run kicad_cip.py -k "keywords"
+```
+- Prompts you to select one product from search results
+- Prompts you to enter KiCad symbol and footprint library names
+- Supports auto-completion of existing library entries
 
-  - CSV file has 3 fields deliminated by ',': keywords, symbol_name, footprint_name
-  - one component per line
-  - app will search using provided keywords from digikey. User has to select one component from the search list
-  - parts will be added automatically if symbol_name and footprint_name is not empty. Otherwise user input will be asked
+**Batch mode (multiple components):**
+```bash
+uv run kicad_cip.py -f parts.csv
+```
+
+The CSV file must have:
+- A header line with exactly 3 columns: `manufacturer_product_number`, `kicad_symbol_library`, `kicad_footprint_library`
+- One component per data row
+- All three fields must be provided
+
+Example `parts.csv`:
+```csv
+manufacturer_product_number,kicad_symbol_library,kicad_footprint_library
+LM324N,Standard:LM324,Standard:LM324_SOIC-14
+ATMega328P,Standard:ATMega328P,Standard:ATMega328P_DIP-28
+```
+
+Batch mode behavior:
+- Automatically searches for the manufacturer product number on Digikey
+- If exactly 1 result found: auto-selects and proceeds without prompts
+- If 0 results: exits with error "Searching {product} returns no results. --file mode failed."
+- If multiple results: exits with error "Searching {product} returns multiple results. --file mode failed."
+- Symbol and footprint values from CSV are used directly (no interactive prompts)
+
+**Note:** If you only provide the product number without symbol/footprint in the CSV (single column format or empty fields), the tool falls back to interactive mode where you manually select the product and enter symbol/footprint names.
+
+**Authentication:**
+- Before first use, run `uv run digikey_auth.py` to obtain a Digikey access token saved to `.token` file
+- The `.token` file must exist in the current directory. If missing, the tool will raise an error.
 
 ‍
