@@ -100,7 +100,7 @@ uv run kicad_cip.py -k "keywords"
 
 **Batch mode (multiple components):**
 ```bash
-uv run kicad_cip.py -f parts.csv
+uv run kicad_cip.py -b parts.csv
 ```
 
 The CSV file must have:
@@ -118,8 +118,8 @@ ATMega328P,Standard:ATMega328P,Standard:ATMega328P_DIP-28
 Batch mode behavior:
 - Automatically searches for the manufacturer product number on Digikey
 - If exactly 1 result found: auto-selects and proceeds without prompts
-- If 0 results: exits with error "Searching {product} returns no results. --file mode failed."
-- If multiple results: exits with error "Searching {product} returns multiple results. --file mode failed."
+- If 0 results: exits with error "Searching {product} returns no results. --batch mode failed."
+- If multiple results: exits with error "Searching {product} returns multiple results. --batch mode failed."
 - Symbol and footprint values from CSV are used directly (no interactive prompts)
 
 **Note:** If you only provide the product number without symbol/footprint in the CSV (single column format or empty fields), the tool falls back to interactive mode where you manually select the product and enter symbol/footprint names.
