@@ -97,6 +97,9 @@ uv run kicad_cip.py -k "keywords"
 - Prompts you to select one product from search results
 - Prompts you to enter KiCad symbol and footprint library names
 - Supports auto-completion of existing library entries
+- Use `?` as a placeholder in the symbol/footprint name to automatically insert the product number. For example:
+  - `Standard:?` becomes `Standard:LM324N` if the product number is `LM324N`
+  - `MyFootprint:?_Rev1` becomes `MyFootprint:LM324N_Rev1`
 
 **Batch mode (multiple components):**
 ```bash
