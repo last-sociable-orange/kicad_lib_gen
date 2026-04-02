@@ -24,6 +24,7 @@ import os
 import requests
 import argparse
 from digikey_auth import refresh_access_token
+import colors
 
 
 def digikey_search(keywords: str, token_file: str = ".token", limit=10, offset=0):
@@ -31,7 +32,7 @@ def digikey_search(keywords: str, token_file: str = ".token", limit=10, offset=0
     # Check if default token file exists
     if token_file == ".token" and not os.path.exists(token_file):
         raise FileNotFoundError(
-            "Authentication token not found. Please run digikey_auth.py to get a valid token"
+            colors.error("Authentication token not found. Please run digikey_auth.py to get a valid token")
         )
 
     with open(token_file, "r") as file:

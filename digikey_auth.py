@@ -4,6 +4,7 @@ from urllib.parse import urlparse, parse_qs
 import argparse
 import json
 from time import time
+import colors
 
 AUTHORIZATION_BASE_URL = "https://api.digikey.com/v1/oauth2/authorize"
 TOKEN_URL = "https://api.digikey.com/v1/oauth2/token"
@@ -26,8 +27,9 @@ def get_auth_code(client_id: str, client_secret: str) -> str:
         digikey = OAuth2Session(client_id, redirect_uri=REDIRECT_URI)
         authorization_url, _ = digikey.authorization_url(AUTHORIZATION_BASE_URL)
         
-        print(f"Please copy and paste URL to your browser. Make sure you have logged in Digikey: {authorization_url}")
-        redirect_response = input("Please copy and paste the redirect URL here: ")
+        colors.print_info("Please copy and paste URL to your browser. Make sure you have logged in Digikey:")
+        print(f"  {colors.Colors.CYAN}{authorization_url}{colors.Colors.RESET}")
+        redirect_response = input(colors.question("Please copy and paste the redirect URL here: "))
         
         # Parse authorization code from redirect URL
         parsed = urlparse(redirect_response)
@@ -35,7 +37,7 @@ def get_auth_code(client_id: str, client_secret: str) -> str:
         return query_params['code'][0]
     
     except Exception as e:
-        logger.error(f"Error getting authorization code: {str(e)}")
+        colors.print_error(f"Error getting authorization code: {str(e)}")
         raise
 
 def get_access_token(auth_code: str, client_id: str, client_secret: str) -> tuple[str, str, int, int]:
@@ -64,7 +66,7 @@ def get_access_token(auth_code: str, client_id: str, client_secret: str) -> tupl
         return token['access_token'], token['refresh_token'], token['expires_in'], token['refresh_token_expires_in']
     
     except Exception as e:
-        logger.error(f"Error getting access token: {str(e)}")
+        colors.print_error(f"Error getting access token: {str(e)}")
         raise
 
 def refresh_access_token(client_id: str, client_secret: str, refresh_token: str) -> tuple[str, str, int, int]:
@@ -93,7 +95,7 @@ def refresh_access_token(client_id: str, client_secret: str, refresh_token: str)
         return token['access_token'], token['refresh_token'], token['expires_in'], token['refresh_token_expires_in']
     
     except Exception as e:
-        logger.error(f"Error refreshing access token: {str(e)}")
+        colors.print_error(f"Error refreshing access token: {str(e)}")
         raise
 
 # Command line interface
@@ -111,16 +113,17 @@ if __name__ == "__main__":
     output = args.output
     
     # # Get authorization code
+    colors.print_header("DigiKey Authentication")
     auth_code = get_auth_code(client_id, client_secret)
-    print(f"Authorization code: {auth_code}")
+    colors.print_success(f"Authorization code received: {colors.highlight(auth_code[:20] + '...')}")
     
     # # Get access tokens
     access_token, refresh_token, expires_in, refresh_token_expires_in = get_access_token(auth_code, client_id, client_secret)
-    print(f'Access token request done! Writting tokens to {output}')
-    print(f'access_token={access_token}')
-    print(f'refresh_token={refresh_token}')
-    print(f'expires_in={expires_in}')
-    print(f'refresh_token_expires_in={refresh_token_expires_in}')
+    colors.print_success(f"Access token request done! Writing tokens to {colors.highlight(output)}")
+    print(f"  {colors.Colors.DIM}access_token={colors.Colors.RESET}{colors.Colors.GREEN}{access_token[:20]}...{colors.Colors.RESET}")
+    print(f"  {colors.Colors.DIM}refresh_token={colors.Colors.RESET}{colors.Colors.GREEN}{refresh_token[:20]}...{colors.Colors.RESET}")
+    print(f"  {colors.Colors.DIM}expires_in={colors.Colors.RESET}{colors.Colors.CYAN}{expires_in}{colors.Colors.RESET}")
+    print(f"  {colors.Colors.DIM}refresh_token_expires_in={colors.Colors.RESET}{colors.Colors.CYAN}{refresh_token_expires_in}{colors.Colors.RESET}")
 
     time_now = int(time()) 
     tokens = {

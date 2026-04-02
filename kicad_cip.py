@@ -69,12 +69,16 @@ import argparse
 import csv
 import logging
 import sys
+import os
+from datetime import datetime
 from digikey_search import digikey_search
 import re
 from prompt_toolkit import prompt
 from prompt_toolkit.completion import WordCompleter
-
+from prompt_toolkit.formatted_text import ANSI
 from dataclasses import dataclass, astuple, field
+
+import colors
 
 
 @dataclass
@@ -222,7 +226,7 @@ class ProductDb:
             INSERT OR REPLACE INTO {tbl_name} VALUES {product_info}
                          """)
         self.con.commit()
-        return
+        return product_info
 
     def query_record(self, product: ProductInfo) -> None | tuple[str]:
         self.cur.execute(f'''
@@ -375,26 +379,38 @@ def select_product_prompt(products: list[ProductInfo]) -> ProductInfo:
     Returns:
         ProductInfo: selected product or an empty ProductInfo instance
     """
-    print(f"Total {len(products)} products found:")
+    colors.print_info(f"Total {len(products)} products found:")
 
     # if found nothing, return a empty product record
     if len(products) == 0:
         return ProductInfo()
     else:
         for index, product in enumerate(products):
-            print(
-                f"  [{index + 1}]: {product.base.manufacturer_product_number}, "
-                f"{product.base.manufacturer}, {product.base.description}, "
-                f"Available Quantity: {product.base.qty_available}, "
-                f"Status: {product.base.part_status}"
-            )
-        product_index = int(prompt("Choose one product, 0 to exit: ", default="1"))
-        if product_index == 0:
-            sys.exit()
-        product = products[product_index - 1]
-        print(
-            f"Selected {product.base.manufacturer_product_number}, {product.base.manufacturer}, {product.base.description}"
-        )
+            print(colors.print_product_item(
+                index + 1,
+                product.base.manufacturer_product_number,
+                product.base.manufacturer,
+                product.base.description,
+                product.base.qty_available,
+                product.base.part_status
+            ))
+        while True:
+            try:
+                product_index = int(prompt(ANSI(colors.question("Choose one product, 0 to exit: ")), default="1"))
+                if product_index == 0:
+                    sys.exit()
+                if product_index < 1 or product_index > len(products):
+                    colors.print_error("Invalid selection, please retry...")
+                    continue
+                product = products[product_index - 1]
+                break
+            except (ValueError, IndexError):
+                colors.print_error("Invalid selection, please retry...")
+        print(colors.print_selected(
+            product.base.manufacturer_product_number,
+            product.base.manufacturer,
+            product.base.description
+        ))
         return product
 
 
@@ -417,15 +433,16 @@ def input_product_info_prompt(
     # empty instance = not found from Digikey, allow manual input
     try:
         if product.base.manufacturer_product_number == "":
+            colors.print_warning("No product found in Digikey")
             if prompt(
-                f"No product found in Digikey, enter manually?[y|n]", default="n"
+                ANSI(colors.question("Enter manually? [y|n]: ")), default="n"
             ) in ["y", "Y"]:
-                product.base.id = prompt("Enter Product ID: ")
-                product.base.description = prompt("Enter Product Description: ")
-                product.base.keywords = prompt("Enter Product keywords: ")
-                product.base.manufacturer = prompt("Enter Product Manufacturer: ")
+                product.base.id = prompt(ANSI(colors.question("Enter Product ID: ")))
+                product.base.description = prompt(ANSI(colors.question("Enter Product Description: ")))
+                product.base.keywords = prompt(ANSI(colors.question("Enter Product keywords: ")))
+                product.base.manufacturer = prompt(ANSI(colors.question("Enter Product Manufacturer: ")))
                 product.base.manufacturer_product_number = prompt(
-                    "Enter Product Manufacturer Product Number: "
+                    ANSI(colors.question("Enter Product Manufacturer Product Number: "))
                 )
                 product.base.value = product.base.manufacturer_product_number
             else:
@@ -433,7 +450,7 @@ def input_product_info_prompt(
 
         # enter kicad symbol and footprint library
         prompt_input = prompt(
-            "Enter Kicad symbol library name: ",
+            ANSI(colors.question("Enter Kicad symbol library name: ")),
             default=product.base.kicad_symbol_library,
             completer=symbol_completer,
             complete_while_typing=True,
@@ -443,7 +460,7 @@ def input_product_info_prompt(
             r"\?", f"{product.base.manufacturer_product_number}", prompt_input
         )
         prompt_input = prompt(
-            "Enter Kicad footprint library name: ",
+            ANSI(colors.question("Enter Kicad footprint library name: ")),
             default=product.base.kicad_footprint_library,
             completer=footprint_completer,
             complete_while_typing=True,
@@ -453,8 +470,27 @@ def input_product_info_prompt(
         )
         return product
     except KeyboardInterrupt:
-        print("Key interrupt, exit")
+        colors.print_error("Keyboard interrupt, exit")
         sys.exit()
+
+
+def write_batch_log(log_entries: list[dict], input_filename: str):
+    """
+    Write batch mode log file with format:
+    <manufacturer_product_number>: <database record> ==> <status>
+    """
+    timestamp = datetime.now().strftime("%y-%m-%d-%H-%M-%S")
+    base_name = os.path.splitext(os.path.basename(input_filename))[0]
+    log_filename = f"{base_name}-{timestamp}.log"
+
+    with open(log_filename, "w") as log_file:
+        for entry in log_entries:
+            mpn = entry["mpn"]
+            record = entry["record"]
+            status = entry["status"]
+            log_file.write(f"{mpn}: {record} ==> {status}\n")
+
+    return log_filename
 
 
 if __name__ == "__main__":
@@ -485,8 +521,20 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    # Display header
+    colors.print_header("═" * 60)
+    colors.print_header(" KiCad Component Information Provider (CIP)")
+    colors.print_header("═" * 60)
+    print()
+
     # open sqlite db
     db = ProductDb(db_name=args.output)
+    colors.print_info(f"Using database: {colors.highlight(args.output)}")
+    print()
+
+    # Initialize batch log if in batch mode
+    batch_log: list[dict] = []
+    is_batch_mode = args.batch is not None
 
     # get input keywords from either cmd or csv file
     # csv fields are keywords, symbol_name, footprint_name
@@ -494,32 +542,29 @@ if __name__ == "__main__":
     if args.keywords is not None:
         keywords_list.append({"product": args.keywords, "symbol": "", "footprint": ""})
     else:
-        with open(args.file, "r") as file:
+        with open(args.batch, "r") as file:
             rows = csv.reader(file)
             rows_list = list(rows)
 
             if len(rows_list) < 2:
-                print(
-                    "Error: CSV file must contain a header line and at least one data row",
-                    file=sys.stderr,
+                colors.print_error(
+                    "CSV file must contain a header line and at least one data row"
                 )
                 sys.exit(1)
 
             # Validate header has exactly 3 fields
             header = rows_list[0]
             if len(header) != 3:
-                print(
-                    f"CSV file should contain a header line and 3 fields <product_number>, <symbol_library>, <footprint_library>",
-                    file=sys.stderr,
+                colors.print_error(
+                    "CSV file should contain a header line and 3 fields <product_number>, <symbol_library>, <footprint_library>"
                 )
                 sys.exit(1)
 
             # Process data rows (skip header)
             for row in rows_list[1:]:
                 if len(row) != 3:
-                    print(
-                        f"CSV file should contain a header line and 3 fields <product_number>, <symbol_library>, <footprint_library>",
-                        file=sys.stderr,
+                    colors.print_error(
+                        "CSV file should contain a header line and 3 fields <product_number>, <symbol_library>, <footprint_library>"
                     )
                     sys.exit(1)
                 keywords_list.append(
@@ -527,10 +572,20 @@ if __name__ == "__main__":
                 )
 
     # search and add parts
+    colors.print_subheader("Processing parts...")
+    print()
     for keyword in keywords_list:
+        mpn = keyword["product"]
+        log_entry = {"mpn": mpn, "record": "", "status": ""}
+
+        # Show progress indicator
+        if not is_batch_mode:
+            print()
+            colors.print_info(f"Searching for: {colors.highlight(mpn)}")
+
         try:
-            logging.info(f"Searching keyword: {keyword['product']}")
-            results = digikey_search(keyword["product"])
+            logging.info(f"Searching keyword: {mpn}")
+            results = digikey_search(mpn)
             products: list[ProductInfo] = []
             if len(results["Products"]) > 0:
                 for result in results["Products"]:
@@ -539,20 +594,22 @@ if __name__ == "__main__":
             # Determine if batch mode (symbol and footprint provided in CSV)
             batch_mode = bool(keyword["symbol"] and keyword["footprint"])
 
-            # Batch mode validation
+            # Batch mode validation - auto-skip on errors
             if batch_mode:
                 if len(products) == 0:
-                    print(
-                        f"Searching {keyword['product']} returns no results. --batch mode failed.",
-                        file=sys.stderr,
+                    log_entry["status"] = "skipped-no-result"
+                    batch_log.append(log_entry)
+                    colors.print_warning(
+                        f"Searching '{colors.highlight(mpn)}' returned no results. Skipping."
                     )
-                    sys.exit(1)
+                    continue
                 elif len(products) > 1:
-                    print(
-                        f"Searching {keyword['product']} returns multiple results. --batch mode failed.",
-                        file=sys.stderr,
+                    log_entry["status"] = "skipped-multi-results"
+                    batch_log.append(log_entry)
+                    colors.print_warning(
+                        f"Searching '{colors.highlight(mpn)}' returned {len(products)} results. Skipping."
                     )
-                    sys.exit(1)
+                    continue
                 else:
                     product = products[0]  # Auto-select the single result
             else:
@@ -560,8 +617,17 @@ if __name__ == "__main__":
 
             insert_op = True
             if db.query_record(product) is not None:
-                if prompt("Product exist, overwrite?[y|n]", default="n") in ["n", "N"]:
-                    insert_op = False
+                if batch_mode:
+                    # Auto-skip duplicates in batch mode
+                    log_entry["status"] = "skipped-duplicate"
+                    batch_log.append(log_entry)
+                    colors.print_warning(
+                        f"'{colors.highlight(mpn)}' already exists in database. Skipping."
+                    )
+                    continue
+                else:
+                    if prompt(ANSI(colors.question("Product exist, overwrite? [y|n]: ")), default="n") in ["n", "N"]:
+                        insert_op = False
 
             if insert_op:
                 if batch_mode:
@@ -600,13 +666,49 @@ if __name__ == "__main__":
                     )
 
                 if product.base.manufacturer_product_number != "":
-                    db.insert_record("components", product)
+                    product_info = db.insert_record("components", product)
                     logging.info(
                         f"inserted one record: {product.base.manufacturer_product_number}"
                     )
+                    colors.print_success(
+                        f"Inserted '{colors.highlight(product.base.manufacturer_product_number)}' into database."
+                    )
+
+                    # Log successful insertion in batch mode
+                    if batch_mode:
+                        # Convert product_info tuple to string representation
+                        record_str = str(product_info)
+                        log_entry["record"] = record_str
+                        log_entry["status"] = "inserted"
+                        batch_log.append(log_entry)
 
         except Exception as e:
             logging.error(f"Search keywords Failed: {str(e)}")
             raise
 
+    # Write batch log file if in batch mode
+    if is_batch_mode and batch_log:
+        log_file_path = write_batch_log(batch_log, args.batch)
+        colors.print_success(f"Batch log written to: {colors.highlight(log_file_path)}")
+
+        # Print batch summary
+        print()
+        colors.print_header("─" * 40)
+        colors.print_subheader("Batch Processing Summary")
+        colors.print_header("─" * 40)
+
+        inserted = len([e for e in batch_log if e["status"] == "inserted"])
+        no_result = len([e for e in batch_log if e["status"] == "skipped-no-result"])
+        multi_results = len([e for e in batch_log if e["status"] == "skipped-multi-results"])
+        duplicates = len([e for e in batch_log if e["status"] == "skipped-duplicate"])
+
+        print(f"  {colors.Colors.GREEN}●{colors.Colors.RESET} Successfully inserted:    {inserted}")
+        print(f"  {colors.Colors.YELLOW}●{colors.Colors.RESET} Skipped (no results):    {no_result}")
+        print(f"  {colors.Colors.YELLOW}●{colors.Colors.RESET} Skipped (multi results): {multi_results}")
+        print(f"  {colors.Colors.YELLOW}●{colors.Colors.RESET} Skipped (duplicates):    {duplicates}")
+        print(f"  {colors.Colors.DIM}─{colors.Colors.RESET} {'─' * 25}")
+        print(f"  {colors.Colors.BOLD}●{colors.Colors.RESET} Total processed:         {len(batch_log)}")
+
+    print()
+    colors.print_success("Done!")
     db.close()
