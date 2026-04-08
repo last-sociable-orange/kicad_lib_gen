@@ -315,7 +315,7 @@ def parse_digikey_response(response: any) -> ProductInfo:
             or param["ParameterId"] == 2087
             or param["ParameterId"] == 2049
         ):
-            if value.find("Ohms"):
+            if value.find("Ohms") != -1:
                 product.base.value = value.removesuffix("Ohms").upper()
             else:
                 product.base.value = value
