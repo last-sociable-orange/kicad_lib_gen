@@ -639,7 +639,7 @@ if __name__ == "__main__":
                     symbol_list = db.query_symbols()
                     footprint_list = db.query_footprints()
                     if symbol_list is not None:
-                        symbols = ["Standard:"]
+                        symbols = ["Standard:", "Symbol:?"]
                         for item in symbol_list:
                             symbols.append(item[1])
                         symbol_completer = WordCompleter(symbols, ignore_case=True)
