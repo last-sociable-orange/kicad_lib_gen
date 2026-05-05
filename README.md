@@ -82,9 +82,7 @@ Symbol and Footprint Workflow:
 
   - Renanme *.stp file to *.step
   - Recommend using environment variables to define the step file path when doing the step file mapping in Footprint Editor
-
-    - Define a Environment Variable: PROJECT_STEP_DIR = "your_step_dir, usually ./Library/Step"
-    - Step file path = ${PROJECT_STEP_DIR}/your_step_file.step
+    - Step file path example = ${KIPRJMOD}/../Library/your_step_file.step
 
 #### Add component information into database
 
