@@ -1,132 +1,181 @@
-# Kicad CIP workflow
+---
+title: 'Bringing Orcad CIS / CIP to KiCad — Database-Driven Component Management'
+description: "How to leverage KiCad 9.0's SQLite database library feature to create an Orcad-style component information system with automated Digikey integration."
+pubDate: 'Apr 28 2026'
+heroImage: '../../assets/blog-placeholder-5.jpg'
+---
 
-The goal of this work flow is to streamline Kicad database library, symbol and footprint pulled from either Digikey or manufacturer's website, and using Digikey CIP app to fill up component information stored in the database. The CIP app is designed specificlly for pulling component information from Digikey using its web API. It is possbile to pull information from other website but for now we only support Digikey.
+## Why I wrote a tool for Kicad Database Library
 
-#### Create Digikey Developer Account
+If you've ever designed a PCB with a team using OrCAD, you've likely used **CIS** (Component Information System) and **CIP** (Component Information Portal). These tools integrate a centralized component database that stores manufacturer part numbers, distributor SKUs, parametric data, and datasheet URLs in one place. **CIS** is critical because it eliminates duplicate data entry and prevents the use of obsolete or unauthorized parts during schematic design. **CIP** is equally essential—it streamlines part request and approval workflows, ensuring that only verified components enter the database. Together, they reduce BOM errors, shorten design cycles, and enforce design consistency across teams, making them indispensable for professional PCB development.
 
-Register at https://developer.digikey.com/
+KiCad has included a database library feature since version 7, allowing designers to link symbols and footprints to external data sources like SQLite, MySQL, or PostgreSQL via ODBC connections. However, unlike OrCAD CIS/CIP, KiCad's implementation remains largely manual and lacks a built-in GUI for database management. Users must manually input every component's parameters (part numbers, values, tolerances, datasheet links, etc.) directly into the database using external tools — there is no form-based entry or validation within KiCad itself. Creating a usable component database currently requires manual SQL scripting or third-party database clients (such as SQLiteStudio) — a steep barrier for engineers without database experience.
 
-Create a Organization -> Memeber -> Production Apps
+So I wrote a python script to bring CIS/CIP workflow to Kicad. 
 
-- Callback URL https://localhost:8000/oauth2/callback (has to match the callback URL in python code)
-- Copy Client ID and Client Secrete
+## The Tool: `kicad-lib-gen`
 
-#### Prepare Python environmnet
+This command-line python script [`kicad-lib-gen`](https://github.com/last-sociable-orange/kicad_lib_gen) brings the CIS/CIP workflow to KiCad. It connects to the **Digikey API**, fetches real-time product data, and stores it directly into a SQLite database that KiCad's symbol and footprint choosers can read natively.
 
-- Install `uv`​: [docs.astral.sh/uv/getting-started/installation/](https://docs.astral.sh/uv/getting-started/installation/)
-- Copy python files into folder
-- Run `uv run digikey_auth.py` to get token file from Digikey Dev portal
-- Run `uv run kicad_cip.py` to retrieve component information from Digikey and store it into Sqlite database
+Here's what it does:
 
-#### Create Kicad Project
+- **Search Digikey** by manufacturer part number and pull down descriptions, parameters, pricing, datasheet URLs, and availability
+- **Store everything** into a SQLite database with the exact schema KiCad expects
+- **Link components** to KiCad symbols and footprints (with tab-completion for existing entries)
+- **Batch import** hundreds of parts from a CSV file
+- **Auto-refresh** Digikey OAuth tokens so you don't have to babysit authentication
 
-- Create Kicad project
-- Create `Library`​, `Library/Symbol`​, `Library/Footprint/Footprint.pretty`​, `Library/Step` folders under project folder
+## How It Works
+
+### 1. Authentication
+
+You start by registering a free developer account at [Digikey's Developer Portal](https://developer.digikey.com/). Create an application, get your Client ID and Client Secret, then run:
 
 ```bash
-mkdir -p Library
-mkdir -p Library/Symbol Library/Footprint/Footprint.pretty Library/Step
+uv run digikey_auth.py --user YOUR_CLIENT_ID --secret YOUR_CLIENT_SECRET
 ```
 
-- Copy `components_db.kicad_dbl`​ under project folder. This is the `ODBC` setup file for the system to interact with the Sqlite database.
-- Copy `components.db`​under `Library`if you have an existing database
-- Copy python CIP scripts under `Library`​. You can also use it in any other folder and use `-o` option to specify the database file name in the commandline.
-- Copy `Standard.kicad_sym`​ to `Library/Symbol`. This is a library that contains standard symbols and Power/GND symbols that can be used across projects. It is recommended to use these standard symbols to keep schematics design consistant across projects but user can also use their own symbols at their own discretion.
-- Copy folder `Standard.pretty`​ to `Library/Footprint`​. This folder contains generic footprints like `R_0402`​, `SOT23` that can be used for components that have standard footprints, etc.
-- A starter `Standard.kicad_sym`​ and `Library/Sdandard.pretty` will be provided for new project.
+This kicks off the OAuth2 flow. You paste a URL into your browser, authorize the app, and paste the redirect URL back. The tool saves your tokens to a `.token` file with automatic refresh — you won't need to re-authenticate for months.
 
-#### Prepare symbol, footprint and step files
+### 2. Database Setup
 
-Symbols and Footprints are organized following below rules:
+The tool creates a `components.db` SQLite file with the schema KiCad expects. Each record stores:
 
-Symbol high-level rules:
+- Manufacturer and manufacturer product number
+- Description, keywords, and category tree
+- Package type and parametric data (up to 32 parameters)
+- Datasheet URL and product URL
+- Distributor info (Digikey product number, pricing, quantity available)
+- **KiCad symbol library** and **footprint library** links
 
-- ​`Standard.kicad_sym`​ contains generic symbols that are vendor agnostic. Field `KicadSymbolLibrary`​ in Sqlite database maps to the symbol names in `Standard.kicad_sym`​. To link them together, one must enter `Standard:<symbol_name>`​correctly when creating a component instance in the component information database. For example: A resistor's symbol name in database would be: `Standard:R`​ when entering the resistor's `KicadSymbolLibrary` field.
-- No standard symbols are stored seperately per component in `Library/Symbol` folder. This makes it easier to manage symbols from project perspective. One can change a symbol and manage revision using git or other revision control tools without affecting other symbols. Naming convetions are covered below.
+The database can live in your project's `Library/` folder, and you configure KiCad to use it via a `.kicad_dbl` ODBC configuration file.
 
-Footprint high-level rules:
+### 3. Interactive Mode: Adding Components One at a Time
 
-- Footprints are stored seperately per component (or per footprint for generic footprints) in `Standard.pretty`​ or `Footprint.pretty` folders respectively
+The most common workflow is searching for a part and adding it:
 
-Symbol and Footprint Workflow:
-
-- Use standard symbols/footprint if they are available in `Standard.kicad_sym`​ and `Standard.pretty`
-- Download symbol and footprint (and step file) from Digikey/Mouser/Ultralibrarian/SanpEDA
-- **Important!** ​ **Check symbol and footprint integrity and correctness against datasheet.**
-- Create symbol and footprint if they are not available
-- Copy symbol, footprint and step files to `Library/Symbol`​, `Library/Footprint/Footprint.pretty`​ and `Library/Step` folders respectively
-- Rename symbol/footprint/step files following below rules:
-
-  - [component_type]_[component_product_number]
-  - component_type is one of the followings, or best fit:
-
-    - IC, for integrated circuit chips
-    - DIO, for diodes, including schottky, tvs
-    - IND, for inductors, coils, chocks, ferrite beads
-    - TRANS, for transistors, including BJTs, FETs
-    - CON, for connectors
-    - SW, for switches
-    - ...
-  - component_product_number is the full part number including package suffix
-  - All chars are capital letters
-- **Symbol extra steps**:
-
-  - Open symbol with Kicad Symbol Editor, edit/delete unneccessary fields to avoid them polluting the database information. Only leave Kicad default fields.
-  - Save symbol in the same name as the file name. The purpose of this step is to match the database information entered in CIS app
-- **Footprint extra steps**:
-
-  - Make sure Reference field is **REF****
-  - Make sure Value field visibility is **Unchecked**
-  - Add Text in F.Fab layer with value ${REFERENCE}. This is used as Reference Designator in Assembly Drawing
-- **Step file extra steps**:
-
-  - Renanme *.stp file to *.step
-  - Recommend using environment variables to define the step file path when doing the step file mapping in Footprint Editor
-    - Step file path example = ${KIPRJMOD}/../Library/your_step_file.step
-
-#### Add component information into database
-
-There are two ways to add components into database:
-
-**Interactive mode (single component):**
 ```bash
-uv run kicad_cip.py -k "keywords"
+uv run kicad_cip.py -k "LM324N"
 ```
-- Prompts you to select one product from search results
-- Prompts you to enter KiCad symbol and footprint library names
-- Supports auto-completion of existing library entries
-- Use `?` as a placeholder in the symbol/footprint name to automatically insert the product number. For example:
-  - `Standard:?` becomes `Standard:LM324N` if the product number is `LM324N`
-  - `MyFootprint:?_Rev1` becomes `MyFootprint:LM324N_Rev1`
 
-**Batch mode (multiple components):**
+The tool searches Digikey, shows you the results, and lets you pick:
+
+```
+Total 5 products found:
+  [1]: LM324N, Texas Instruments, IC OPAMP GP 4 CIRCUIT 14DIP, Qty: 2500, Active
+  [2]: LM324NE4, Texas Instruments, IC OPAMP GP 4 CIRCUIT 14DIP, Qty: 1800, Active
+  [3]: LM324NP, Texas Instruments, IC OPAMP GP 4 CIRCUIT 14DIP, Qty: 0, Obsolete
+  ...
+Choose one product, 0 to exit: 1
+```
+
+After selecting the part, it prompts you for the KiCad symbol and footprint, with **auto-completion** of existing libraries in your database. These names will link to the component `.kicad_sym` and `.kicad_mod` files in your local project folder.
+
+```
+Enter Kicad symbol library name: Symbol:IC_LM324N
+Enter Kicad footprint library name: Footprint:IC_LM324N
+```
+
+A neat trick: you can use `?` as a placeholder for the product number:
+
+```
+Enter Kicad symbol library name: Symbol:IC_?      -> becomes Symbol:IC_LM324N
+Enter Kicad footprint library name: Footprint:IC_?   -> becomes Footprint:IC_LM324N
+```
+
+This is a huge time-saver when you're importing dozens of parts.
+
+### 4. Batch Mode: Importing from CSV
+
+For setting up a whole BOM at once, batch mode is where the tool really shines:
+
 ```bash
 uv run kicad_cip.py -b parts.csv
 ```
 
-The CSV file must have:
-- A header line with exactly 3 columns: `manufacturer_product_number`, `kicad_symbol_library`, `kicad_footprint_library`
-- One component per data row
-- All three fields must be provided
+Your CSV file looks like this:
 
-Example `parts.csv`:
 ```csv
 manufacturer_product_number,kicad_symbol_library,kicad_footprint_library
-LM324N,Standard:LM324,Standard:LM324_SOIC-14
-ATMega328P,Standard:ATMega328P,Standard:ATMega328P_DIP-28
+LM324N,Symbol:IC_LM324N,Footprint:IC_LM324N
+ATMega328P,Symbol:IC_ATMega328PB-MU,Footprint:IC_ATMega328PB-MU
+STM32F103C8T6,Symbol:IC_STM32F103C8T6,Footprint:IC_STM32F103C8T6
 ```
 
-Batch mode behavior:
-- Automatically searches for the manufacturer product number on Digikey
-- If exactly 1 result found: auto-selects and proceeds without prompts
-- If 0 results: exits with error "Searching {product} returns no results. --batch mode failed."
-- If multiple results: exits with error "Searching {product} returns multiple results. --batch mode failed."
-- Symbol and footprint values from CSV are used directly (no interactive prompts)
+The tool iterates each row, searches Digikey for an exact match, and auto-inserts the record with the specified symbol and footprint. It's strict — if a search returns zero or multiple results, it fails fast rather than silently picking the wrong part. Log file is provided so that you are fully aware which components are inserted and which are dropped with reasons. 
 
-**Note:** If you only provide the product number without symbol/footprint in the CSV (single column format or empty fields), the tool falls back to interactive mode where you manually select the product and enter symbol/footprint names.
+### 5. Symbol and Footprint Organization
 
-**Authentication:**
-- Before first use, run `uv run digikey_auth.py` to obtain a Digikey access token saved to `.token` file
-- The `.token` file must exist in the current directory. If missing, the tool will raise an error.
+The tool works with a **carefully organized library structure** that keeps projects maintainable at scale:
 
-‍
+```
+Library/
+├── components.db                     # SQLite database
+├── components_db.kicad_dbl           # KiCad ODBC config
+├── Symbol/
+│   ├── Symbol           			  # Per-part symbols
+│   │	├── IC_LM324N.kicad_sym       
+│   │	└── IC_ATMega328PB-MU.kicad_sym
+│   └── Standard           			  # Standard symbols
+│   	└── Standard.kicad_sym
+├── Footprint/
+│   ├── Footprint.pretty/
+│   │   ├── IC_LM324N.pretty     	  # Per-part footprints
+│   │   └── IC_ATMega328PB-MU.pretty
+│   └── Standard.pretty/			  # Standard footprints
+│       ├── R_0402.pretty
+│       └── SOT23.pretty
+└── Step/                              # 3D models
+    ├── IC_LM324N.stp
+    └── IC_ATMega328PB-MU.stp
+```
+
+The key insight: **generic components** (resistors, capacitors, standard logic) use shared symbols in `Standard.kicad_sym`, while **specific ICs, passives, connectors, etc.** each get their own file. This gives you the best of both worlds — reuse for common parts, isolation for complex ones.
+
+## Connecting It to KiCad
+
+Once your database is populated, you configure KiCad to use it. Make sure the way how you setup your Kicad libraries matches what you have entered in your database  `KicadSymbolLibrary` and `KicadFootprintLibrary` fields using the command line prompt.
+
+1. Install SQLite database driver, setup DSN, etc.
+2. Place `components_db.kicad_dbl` in your project `Library` folder
+3. In KiCad, open the **Manage Symbol Libraries** menu and add your database library file (`.kicad_dbl`) to `Project Specific Libraries`. 
+4. Link to your per-part symbols. You have two options to add files to `Project Specific Libraries`:
+   + Add each individual files : If you add per-part symbols (i.e.: IC_LM324N.kicad_sym that contains only one symbol named IC_LM324N) in your `Project Specific Libraries`, you have to input `IC_LM324N:IC_LM324N` when you are prompted to enter the Kicad symbol library name. Basically with this scheme, the symbol library name should be `<symbol_file_name>:<symbol_name>` .
+   + Add entire folder (Kicad 10 new feature): You can add the folder as opposed to symbol files to your `Project Specific Libraries`. With this scheme, the symbol library name should be  `<symbol_folder_name>:<symbol_file_name>`  
+5. Add your `Standard.kicad_sym`  as regular kicad symbol
+6. Then open the **Manage Footprint Libraries** menu to ensure the footprint library paths referenced in your database are accessible.
+7. In KiCad's Symbol Chooser, you'll see components from your database
+8. Browse components by category, search by keyword, and place them on your schematic
+9. The footprint is automatically associated — KiCad picks it up from the database record
+
+This mirrors the Orcad CIS experience: you browse a database-driven library, place a symbol, and the footprint and metadata follow.
+
+## Getting Started
+
+The tool is live on [GitHub](https://github.com/last-sociable-orange/kicad_lib_gen). Here's the quick start:
+
+```bash
+# Install dependencies
+uv sync
+
+# Authenticate with Digikey
+uv run digikey_auth.py --user YOUR_ID --secret YOUR_SECRET
+
+# Add a single part interactively
+uv run kicad_cip.py -k "LM324N"
+
+# Or batch import from CSV
+uv run kicad_cip.py -b bom_parts.csv
+```
+
+You'll need a free Digikey developer account, but that's it — no server, no cloud dependency, no vendor lock-in. The database is just a SQLite file on your disk.
+
+If you're using KiCad in a team setting and missing the CIS/CIP workflow from Orcad, give this a try. 
+
+## Disclaimer
+
+I am not a software developer. This script is intended for DIYers and hobbyist use only. It is provided as-is, with no guarantees of correctness, data integrity, or compatibility with future KiCad or Digikey API changes. You assume full responsibility for any issues — including corrupted databases, incorrect BOMs, or fried PCBs. Always verify part data against official manufacturer sources before ordering components.
+
+---
+
+*Have questions or ideas? Drop me a note or open an issue on GitHub.*
