@@ -1,10 +1,3 @@
----
-title: 'Bringing Orcad CIS / CIP to KiCad — Database-Driven Component Management'
-description: "How to leverage KiCad 9.0's SQLite database library feature to create an Orcad-style component information system with automated Digikey integration."
-pubDate: 'Apr 28 2026'
-heroImage: '../../assets/blog-placeholder-5.jpg'
----
-
 ## Why I wrote a tool for Kicad Database Library
 
 If you've ever designed a PCB with a team using OrCAD, you've likely used **CIS** (Component Information System) and **CIP** (Component Information Portal). These tools integrate a centralized component database that stores manufacturer part numbers, distributor SKUs, parametric data, and datasheet URLs in one place. **CIS** is critical because it eliminates duplicate data entry and prevents the use of obsolete or unauthorized parts during schematic design. **CIP** is equally essential—it streamlines part request and approval workflows, ensuring that only verified components enter the database. Together, they reduce BOM errors, shorten design cycles, and enforce design consistency across teams, making them indispensable for professional PCB development.
