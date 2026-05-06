@@ -1,0 +1,484 @@
+{
+    "meta": {
+        "version": 0
+    },
+    "name": "Kicad CIS",
+    "description": "Kicad CIS Library",
+    "source": {
+        "type": "odbc",
+        "dsn": "",
+        "username": "",
+        "password": "",
+        "timeout_seconds": 2,
+        "connection_string": "Driver={SQLite3};Database=${CWD}/../kicad_lib/components.db"
+    },
+    "libraries": [
+        {
+            "name": "components",
+            "table": "components",
+            "key": "ID",
+            "symbols": "KicadSymbolLibrary",
+            "footprints": "KicadFootprintLibrary",
+            "fields": [
+                {
+                    "column": "ID",
+                    "name": "ID",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Description",
+                    "name": "Description",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Keywords",
+                    "name": "Keywords",
+                    "visible_on_add": false,
+                    "visible_in_chooser": false
+                },
+                {
+                    "column": "Value",
+                    "name": "Value",
+                    "visible_on_add": true,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Manufacturer",
+                    "name": "Manufacturer",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "ManufacturerProductNumber",
+                    "name": "ManufacturerProductNumber",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+		{
+                    "column": "KicadSymbolLibrary",
+                    "name": "KicadSymbolLibrary",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+		{
+                    "column": "KicadFootprintLibrary",
+                    "name": "KicadFootprintLibrary",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Package",
+                    "name": "Package",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "PartStatus",
+                    "name": "PartStatus",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Distributor",
+                    "name": "Distributor",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "DistributorProductNumber",
+                    "name": "DistributorProductNumber",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "UnitPrice",
+                    "name": "UnitPrice",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "ProductUrl",
+                    "name": "ProductUrl",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "DatasheetUrl",
+                    "name": "DatasheetUrl",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Param01",
+                    "name": "Param01",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Value01",
+                    "name": "Value01",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Param02",
+                    "name": "Param02",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Value02",
+                    "name": "Value02",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Param03",
+                    "name": "Param03",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Value03",
+                    "name": "Value03",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Param04",
+                    "name": "Param04",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Value04",
+                    "name": "Value04",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Param05",
+                    "name": "Param05",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Value05",
+                    "name": "Value05",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Param06",
+                    "name": "Param06",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Value06",
+                    "name": "Value06",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Param07",
+                    "name": "Param07",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Value08",
+                    "name": "Value08",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Param09",
+                    "name": "Param09",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Value09",
+                    "name": "Value09",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Param10",
+                    "name": "Param10",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Value10",
+                    "name": "Value10",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Param11",
+                    "name": "Param11",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Value11",
+                    "name": "Value11",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Param12",
+                    "name": "Param12",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Value12",
+                    "name": "Value12",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Param13",
+                    "name": "Param13",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Value13",
+                    "name": "Value13",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Param14",
+                    "name": "Param14",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Value14",
+                    "name": "Value14",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Param15",
+                    "name": "Param15",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Value15",
+                    "name": "Value15",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Param16",
+                    "name": "Param16",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Value17",
+                    "name": "Value17",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Param18",
+                    "name": "Param18",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Value18",
+                    "name": "Value18",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Param19",
+                    "name": "Param19",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Value19",
+                    "name": "Value19",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Param20",
+                    "name": "Param20",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Value20",
+                    "name": "Value20",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Param21",
+                    "name": "Param21",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Value21",
+                    "name": "Value21",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Param22",
+                    "name": "Param22",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Value22",
+                    "name": "Value22",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Param23",
+                    "name": "Param23",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Value23",
+                    "name": "Value23",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Param24",
+                    "name": "Param24",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Value24",
+                    "name": "Value24",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Param25",
+                    "name": "Param25",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Value25",
+                    "name": "Value25",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Param26",
+                    "name": "Param26",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Value26",
+                    "name": "Value26",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Param27",
+                    "name": "Param27",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Value27",
+                    "name": "Value27",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Param28",
+                    "name": "Param28",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Value28",
+                    "name": "Value28",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Param29",
+                    "name": "Param29",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Value29",
+                    "name": "Value29",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Param30",
+                    "name": "Param30",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Value30",
+                    "name": "Value30",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Param31",
+                    "name": "Param31",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Value31",
+                    "name": "Value31",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Param32",
+                    "name": "Param32",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                },
+                {
+                    "column": "Value32",
+                    "name": "Value32",
+                    "visible_on_add": false,
+                    "visible_in_chooser": true
+                }
+            ],
+            "properties": {
+                "description": "Description",
+                "footprint_filters": "Footprint Filters",
+                "keywords": "Keywords",
+                "Datasheet": "DatasheetUrl",
+                "exclude_from_bom": "No BOM",
+                "exclude_from_board": "Schematic Only"
+            }
+        }
+    ]
+}
